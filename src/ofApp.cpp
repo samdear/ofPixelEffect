@@ -3,63 +3,98 @@
 
 void ofApp::setup()
 {
-    // Initialize the webcam grabber
     grabber.setup(1280, 720);
-    
-    // Allocate an image buffer for the result image with the same resolution
     resultImg.allocate(1280, 720, OF_IMAGE_COLOR);
     
     // Set texture filtering to GL_NEAREST to achieve a pixelated effect
     resultImg.getTexture().setTextureMinMagFilter(GL_NEAREST, GL_NEAREST);
     
-    // Create a GUI panel with a slider for controlling pixelation block size
     blockSize.set("Pixel Size", 1, 1, 50);
     
-    guiPanel.setup("Pixels");
+    parameters.setName("Color Style");
+    parameters.add(regChoice.set("Regular", true));
+    parameters.add(limitedChoice.set("Limited", false));
+    
+    // Added listeners to monitor changes in the color style
+    regChoice.addListener(this, &ofApp::regChoiceChanged);
+    limitedChoice.addListener(this, &ofApp::limitedChoiceChanged);
+    
+    guiPanel.setup("Effects");
+    guiPanel.add(parameters);
     guiPanel.add(blockSize);
+}
+
+void ofApp::regChoiceChanged(bool & regular)
+{
+    ofSetVerticalSync(regChoice);
+    ofLogNotice() << "regChoice changed: " << regChoice;
+    
+    if (regChoice.get() == true)
+    {
+        limitedChoice.set(false);
+    }
+    else
+    {
+        limitedChoice.set(true);
+    }
+}
+
+void ofApp::limitedChoiceChanged(bool & limited)
+{
+    ofSetVerticalSync(limitedChoice);
+    ofLogNotice() << "limitedChoice changed: " << limitedChoice;
+    
+    if (limitedChoice.get() == true)
+    {
+        regChoice.set(false);
+    }
+    else
+    {
+        regChoice.set(true);
+    }
 }
 
 void ofApp::update()
 {
-    //Run whichever function you input
-    regColors();
+    // Update the video effect based on the chosen color style
+    if (regChoice == true && limitedChoice == false)
+    {
+        regColors();
+    }
+    else
+    {
+        limitedColors();
+    }
 }
 
 void ofApp::draw()
 {
-    int w = 1280;  // Set the output width
-    int h = 720;   // Set the output height
+    int w = 1280;
+    int h = 720;
     
     // Create an off-screen frame buffer object (FBO)
     ofFbo fbo;
     
     // Adjust the FBO size for pixelation
     fbo.allocate(w / blockSize, h / blockSize);
-    
-    // Set texture filtering for the FBO to achieve a pixelated effect
     fbo.getTexture().setTextureMinMagFilter(GL_NEAREST, GL_NEAREST);
     
     fbo.begin();
-    ofClear(0, 0, 0, 0);  // Clear the FBO
+    ofClear(0, 0, 0, 0);
     
     // Draw the webcam input to the FBO, scaled for pixelation
     resultImg.draw(0, 0, w / blockSize, h / blockSize);
     
     fbo.end();
-    
-    // Draw the FBO at full screen size, creating the pixelation effect
     fbo.draw(0, 0, w, h);
     
-    // Draw the GUI panel for adjusting pixelation block size
     guiPanel.draw();
 }
 
 void ofApp::regColors()
 {
-    // Update the webcam grabber to get the latest frame
     grabber.update();
     
-    // Get a reference to the webcam image and the result image
     ofPixels& grabberPix = grabber.getPixels();
     ofPixels& resultPix = resultImg.getPixels();
     
@@ -72,15 +107,13 @@ void ofApp::regColors()
             resultPix.setColor(x, y, pixColor);
         }
     }
-    resultImg.update();  // Update the result image with the new colors
+    resultImg.update();
 }
 
-void ofApp::selectColors()
+void ofApp::limitedColors()
 {
-    // Update the webcam grabber to get the latest frame
     grabber.update();
     
-    // Get a reference to the webcam image and the result image
     ofPixels& grabberPix = grabber.getPixels();
     ofPixels& resultPix = resultImg.getPixels();
     
@@ -91,10 +124,8 @@ void ofApp::selectColors()
         {
             ofColor pixColor = grabberPix.getColor(x, y);
             
-            // Calculate the hue value of the pixel
             int hue = pixColor.getHue();
             
-            // Define the number of colors and the range for categorizing hues
             int numColors = 3;
             int range = 255 / numColors;
             
@@ -107,5 +138,5 @@ void ofApp::selectColors()
                 resultPix.setColor(x, y, ofColor::green);
         }
     }
-    resultImg.update();  // Update the result image with the new colors
+    resultImg.update();
 }
